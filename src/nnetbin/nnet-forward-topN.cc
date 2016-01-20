@@ -43,15 +43,17 @@ int main(int argc, char *argv[]) {
     const char *usage =
         "Perform forward pass through Neural Network.\n"
         "\n"
-        "Usage:  nnet-forward-topN [options] <model-in> <feature-rspecifier> <feature-wspecifier>\n"
+        "Usage:  nnet-forward-topN [options] <model-in> <feature-rspecifier> <top-n-posteriors-wspecifier> <top-n-indices-wspecifier>\n"
         "e.g.: \n"
-        " nnet-forward-topN nnet ark:features.ark ark:mlpoutput.ark\n";
+        " nnet-forward-topN nnet ark:features.ark ark:topnoutput.ark ark:topnindices.ark\n";
 
     ParseOptions po(usage);
 
     PdfPriorOptions prior_opts;
     prior_opts.Register(&po);
 
+    // 
+    
     std::string feature_transform;
     po.Register("feature-transform", &feature_transform, "Feature transform in front of main network (in nnet format)");
 
@@ -75,15 +77,16 @@ int main(int argc, char *argv[]) {
     
     po.Read(argc, argv);
 
-    if (po.NumArgs() != 3) {
+    if (po.NumArgs() != 4) {
       po.PrintUsage();
       exit(1);
     }
 
+    
     std::string model_filename = po.GetArg(1),
         feature_rspecifier = po.GetArg(2),
-        feature_wspecifier = po.GetArg(3);
-        
+        feature_wspecifier = po.GetArg(3),
+        top_n_indices_wspecifier = po.GetArg(4);
     //Select the GPU
 #if HAVE_CUDA==1
     CuDevice::Instantiate().SelectGpuId(use_gpu);
@@ -123,6 +126,10 @@ int main(int argc, char *argv[]) {
 
     SequentialBaseFloatMatrixReader feature_reader(feature_rspecifier);
     BaseFloatMatrixWriter feature_writer(feature_wspecifier);
+    
+    
+      
+     Int32VectorVectorWriter top_n_index_writer(top_n_indices_wspecifier);
 
     CuMatrix<BaseFloat> feats, feats_transf, nnet_out;
     Matrix<BaseFloat> nnet_out_host;
@@ -196,12 +203,16 @@ int main(int argc, char *argv[]) {
       nnet_out_host.Resize(nnet_out.NumRows(), nnet_out.NumCols());
       nnet_out.CopyToMat(&nnet_out_host);
       
-      
-      // the extracted top N softmax and indices will be put into nnet_out_host_top_n
-      // the format of the output is #indices index_1 index_2 ... index_{#indices} sofmax_1 softmax_2 ... softmax_{#indices}
-      nnet_out_host_top_n.Resize(nnet_out.NumRows(), top_n * 2);
+      // like the gselect format, the top-n indices are stored as vector of vectors, which is directly readable by the sgmm code
+      std::vector<std::vector<int32> > top_n_indices_vec;
+     
+      // the matrix to store the top-n posteriors for all the frames of the current file
+      nnet_out_host_top_n.Resize(nnet_out.NumRows(), top_n);
       
       for (int row = 0; row < nnet_out.NumRows(); row ++){
+	
+	  // the int vector to store the top-n indices for the current frame
+	  std::vector<int32> indices;
 	  // use a priority queue to store the pairs of the softmax and indices
 	  std::priority_queue<std::pair<BaseFloat, int32>, std::vector <  std::pair< BaseFloat,int32> >, ComparePosterior > p_queue;
 	  for (int32 i = 0; i < top_n ; ++i) {
@@ -215,15 +226,17 @@ int main(int argc, char *argv[]) {
 	      p_queue.push(std::pair<BaseFloat, int32>(value, i));
 	  }	
 	}
-	for (int32 i = 0; i < top_n; ++i) {
+	for (int32 i = top_n - 1; i >= 0; i--) {
 	  int32 index = p_queue.top().second;
 	  BaseFloat post = p_queue.top().first;
 	  p_queue.pop();
-	  nnet_out_host_top_n(row,i) = (BaseFloat)index;
-	  nnet_out_host_top_n(row,i+top_n) = post;
+	  indices.push_back(index);
+	  nnet_out_host_top_n(row,i) = post;
 	}
+	std::reverse( indices.begin(), indices.end() );
+	 top_n_indices_vec.push_back(indices);
       }
-      
+     
       // time-shift, remove N first frames of LSTM output,
       if (time_shift > 0) {
         Matrix<BaseFloat> tmp(nnet_out_host);
@@ -234,8 +247,9 @@ int main(int argc, char *argv[]) {
       if (!KALDI_ISFINITE(nnet_out_host.Sum())) { // check there's no nan/inf,
         KALDI_ERR << "NaN or inf found in final output nn-output for " << utt;
       }
-      //feature_writer.Write(feature_reader.Key(), nnet_out_host);
+      //write the top-N posteriors and indices
       feature_writer.Write(feature_reader.Key(), nnet_out_host_top_n);
+      top_n_index_writer.Write(feature_reader.Key(), top_n_indices_vec);
       // progress log
       if (num_done % 100 == 0) {
         time_now = time.Elapsed();
