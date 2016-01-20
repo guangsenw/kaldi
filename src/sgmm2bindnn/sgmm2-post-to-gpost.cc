@@ -22,9 +22,9 @@
 
 #include "base/kaldi-common.h"
 #include "util/common-utils.h"
-#include "sgmm2/am-sgmm2.h"
+#include "sgmm2dnn/am-sgmm2.h"
 #include "hmm/transition-model.h"
-#include "sgmm2/estimate-am-sgmm2.h"
+#include "sgmm2dnn/estimate-am-sgmm2.h"
 #include "hmm/posterior.h"
 
 
@@ -38,9 +38,10 @@ int main(int argc, char *argv[]) {
         "e.g.: sgmm2-post-to-gpost 1.mdl 1.ali scp:train.scp 'ark:ali-to-post ark:1.ali ark:-|' ark:-";
 
     ParseOptions po(usage);
-    std::string gselect_rspecifier, spkvecs_rspecifier, utt2spk_rspecifier;
+    std::string gselect_rspecifier, gammar_rspecifier, spkvecs_rspecifier, utt2spk_rspecifier;
 
     po.Register("gselect", &gselect_rspecifier, "Precomputed Gaussian indices (rspecifier)");
+    po.Register("gammar", &gammar_rspecifier, "Precomputed DNN-UBM posteriors (rspecifier)");
     po.Register("spk-vecs", &spkvecs_rspecifier, "Speaker vectors (rspecifier)");
     po.Register("utt2spk", &utt2spk_rspecifier,
                 "rspecifier for utterance to speaker map");
@@ -77,6 +78,7 @@ int main(int argc, char *argv[]) {
     SequentialBaseFloatMatrixReader feature_reader(feature_rspecifier);
     RandomAccessPosteriorReader posteriors_reader(posteriors_rspecifier);
     RandomAccessInt32VectorVectorReader gselect_reader(gselect_rspecifier);
+    RandomAccessBaseFloatMatrixReader gammar_reader(gammar_rspecifier);
     RandomAccessBaseFloatVectorReaderMapped spkvecs_reader(spkvecs_rspecifier,
                                                            utt2spk_rspecifier);
 
@@ -107,6 +109,9 @@ int main(int argc, char *argv[]) {
       const std::vector<std::vector<int32> > &gselect =
           gselect_reader.Value(utt);
 
+      const Matrix<BaseFloat>  &gammar = 
+	gammar_reader.Value(utt);
+	
       Sgmm2PerSpkDerivedVars spk_vars;
       if (spkvecs_reader.IsOpen()) {
         if (spkvecs_reader.HasKey(utt)) {
@@ -129,10 +134,11 @@ int main(int argc, char *argv[]) {
       BaseFloat prev_like = 0;
       Matrix<BaseFloat> prev_posterior;
       for (size_t i = 0; i < posterior.size(); i++) {
-        am_sgmm.ComputePerFrameVars(mat.Row(i), gselect[i],
+        am_sgmm.ComputePerFrameVars(mat.Row(i), gselect[i], gammar.Row(i),
                                     spk_vars, &per_frame_vars);
 
         gpost[i].gselect = gselect[i];
+	gpost[i].gammar =  gammar.Row(i);
         gpost[i].tids.resize(posterior[i].size());
         gpost[i].posteriors.resize(posterior[i].size());
 

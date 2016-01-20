@@ -23,7 +23,7 @@
 #include <vector>
 using std::vector;
 
-#include "sgmm2/fmllr-sgmm2.h"
+#include "sgmm2dnn/fmllr-sgmm2.h"
 #include "util/parse-options.h"
 
 namespace kaldi {

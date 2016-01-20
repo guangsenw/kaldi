@@ -25,8 +25,8 @@ using std::vector;
 
 #include "base/kaldi-common.h"
 #include "util/common-utils.h"
-#include "sgmm2/am-sgmm2.h"
-#include "sgmm2/fmllr-sgmm2.h"
+#include "sgmm2dnn/am-sgmm2.h"
+#include "sgmm2dnn/fmllr-sgmm2.h"
 #include "hmm/transition-model.h"
 #include "hmm/posterior.h"
 
@@ -35,6 +35,7 @@ namespace kaldi {
 void AccumulateForUtterance(const Matrix<BaseFloat> &feats,
                             const Matrix<BaseFloat> &transformed_feats, // if already fMLLR
                             const std::vector<std::vector<int32> > &gselect,
+			     const Matrix<BaseFloat>  &gammar,
                             const Posterior &post,
                             const TransitionModel &trans_model,
                             const AmSgmm2 &am_sgmm,
@@ -48,7 +49,7 @@ void AccumulateForUtterance(const Matrix<BaseFloat> &feats,
   for (size_t t = 0; t < post.size(); t++) {
     // per-frame vars only used for computing posteriors... use the
     // transformed feats for this, if available.
-    am_sgmm.ComputePerFrameVars(transformed_feats.Row(t), gselect[t],
+    am_sgmm.ComputePerFrameVars(transformed_feats.Row(t), gselect[t],gammar.Row(t),
                                 *spk_vars, &per_frame_vars);
     
 
@@ -59,7 +60,7 @@ void AccumulateForUtterance(const Matrix<BaseFloat> &feats,
                                   spk_vars, &posteriors);
       posteriors.Scale(pdf_post[t][j].second);
       spk_stats->AccumulateFromPosteriors(am_sgmm, *spk_vars, feats.Row(t),
-                                          gselect[t], posteriors, pdf_id);
+                                          gselect[t], gammar.Row(t), posteriors, pdf_id);
     }
   }
 }
@@ -80,7 +81,7 @@ int main(int argc, char *argv[]) {
     
     ParseOptions po(usage);
     string spk2utt_rspecifier, spkvecs_rspecifier, fmllr_rspecifier,
-        gselect_rspecifier;
+        gselect_rspecifier, gammar_rspecifier;
     BaseFloat min_count = 100;
     Sgmm2FmllrConfig fmllr_opts;
     
@@ -94,6 +95,7 @@ int main(int argc, char *argv[]) {
                 "Initial FMLLR transform per speaker (rspecifier)");
     po.Register("gselect", &gselect_rspecifier,
                 "Precomputed Gaussian indices (rspecifier)");
+    po.Register("gammar", &gammar_rspecifier, "Precomputed DNN-UBM posteriors (rspecifier)");
     fmllr_opts.Register(&po);
 
     po.Read(argc, argv);
@@ -124,6 +126,7 @@ int main(int argc, char *argv[]) {
     RandomAccessPosteriorReader post_reader(post_rspecifier);
     RandomAccessBaseFloatVectorReader spkvecs_reader(spkvecs_rspecifier);
     RandomAccessInt32VectorVectorReader gselect_reader(gselect_rspecifier);
+    RandomAccessBaseFloatMatrixReader gammar_reader(gammar_rspecifier);
     RandomAccessBaseFloatMatrixReader fmllr_reader(fmllr_rspecifier);
 
     BaseFloatMatrixWriter fmllr_writer(fmllr_wspecifier);
@@ -197,13 +200,16 @@ int main(int argc, char *argv[]) {
           }
           const std::vector<std::vector<int32> > &gselect =
               gselect_reader.Value(utt);
+	      
+	  const Matrix<BaseFloat>  &gammar = 
+	    gammar_reader.Value(utt);
           
           Matrix<BaseFloat> transformed_feats(feats);
           for (int32 r = 0; r < transformed_feats.NumRows(); r++) {
             SubVector<BaseFloat> row(transformed_feats, r);
             ApplyAffineTransform(fmllr_xform, &row);
           }
-          AccumulateForUtterance(feats, transformed_feats, gselect,
+          AccumulateForUtterance(feats, transformed_feats, gselect,gammar,
                                  post, trans_model, am_sgmm,
                                  logdet, &spk_vars, &spk_stats);
           num_done++;
@@ -240,7 +246,9 @@ int main(int argc, char *argv[]) {
         }
         const std::vector<std::vector<int32> > &gselect =
             gselect_reader.Value(utt);
-        
+        const Matrix<BaseFloat>  &gammar = 
+	    gammar_reader.Value(utt);
+	    
         if (fmllr_reader.IsOpen()) {
           if (fmllr_reader.HasKey(utt)) {
             fmllr_xform.CopyFromMat(fmllr_reader.Value(utt));
@@ -275,7 +283,7 @@ int main(int argc, char *argv[]) {
 
         spk_stats.SetZero();
 
-        AccumulateForUtterance(feats, transformed_feats, gselect,
+        AccumulateForUtterance(feats, transformed_feats, gselect, gammar,
                                post, trans_model, am_sgmm,
                                logdet, &spk_vars, &spk_stats);
         num_done++;

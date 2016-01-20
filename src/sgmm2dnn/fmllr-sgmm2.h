@@ -26,7 +26,7 @@
 #include <vector>
 
 #include "base/kaldi-common.h"
-#include "sgmm2/am-sgmm2.h"
+#include "sgmm2dnn/am-sgmm2.h"
 #include "transform/transform-common.h"
 #include "util/kaldi-table.h"
 #include "util/kaldi-holder.h"
@@ -148,7 +148,6 @@ class FmllrSgmm2Accs {
                                 const std::vector<int32> &gauss_select,
                                 const Matrix<BaseFloat> &posteriors,
                                 int32 state_index);
-
   void AccumulateForFmllrSubspace(const AmSgmm2 &sgmm,
                                   const Sgmm2FmllrGlobalParams &fmllr_globals,
                                   SpMatrix<double> *grad_scatter);
