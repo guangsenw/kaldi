@@ -21,8 +21,8 @@
 
 #include "base/kaldi-math.h"
 #include "gmm/model-test-common.h"
-#include "sgmm2/am-sgmm2.h"
-#include "sgmm2/estimate-am-sgmm2.h"
+#include "sgmm2dnn/am-sgmm2.h"
+#include "sgmm2dnn/estimate-am-sgmm2.h"
 #include "util/kaldi-io.h"
 
 using kaldi::AmSgmm2;

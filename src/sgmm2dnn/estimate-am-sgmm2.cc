@@ -22,8 +22,8 @@
 // limitations under the License.
 
 
-#include "sgmm2/am-sgmm2.h"
-#include "sgmm2/estimate-am-sgmm2.h"
+#include "sgmm2dnn/am-sgmm2.h"
+#include "sgmm2dnn/estimate-am-sgmm2.h"
 #include "thread/kaldi-thread.h"
 
 namespace kaldi {

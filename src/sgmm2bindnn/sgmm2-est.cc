@@ -22,9 +22,9 @@
 #include "base/kaldi-common.h"
 #include "util/common-utils.h"
 #include "thread/kaldi-thread.h"
-#include "sgmm2/am-sgmm2.h"
+#include "sgmm2dnn/am-sgmm2.h"
 #include "hmm/transition-model.h"
-#include "sgmm2/estimate-am-sgmm2.h"
+#include "sgmm2dnn/estimate-am-sgmm2.h"
 
 
 int main(int argc, char *argv[]) {

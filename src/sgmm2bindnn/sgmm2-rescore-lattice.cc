@@ -22,12 +22,12 @@
 #include "base/kaldi-common.h"
 #include "util/common-utils.h"
 #include "util/stl-utils.h"
-#include "sgmm2/am-sgmm2.h"
+#include "sgmm2dnn/am-sgmm2.h"
 #include "hmm/transition-model.h"
 #include "fstext/fstext-lib.h"
 #include "lat/kaldi-lattice.h"
 #include "lat/lattice-functions.h"
-#include "sgmm2/decodable-am-sgmm2.h"
+#include "sgmm2dnn/decodable-am-sgmm2.h"
 
 int main(int argc, char *argv[]) {
   try {
@@ -47,7 +47,7 @@ int main(int argc, char *argv[]) {
     kaldi::BaseFloat old_acoustic_scale = 0.0;
     bool speedup = false;
     BaseFloat log_prune = 5.0;
-    std::string gselect_rspecifier, spkvecs_rspecifier, utt2spk_rspecifier;
+    std::string gselect_rspecifier, gammar_rspecifier, spkvecs_rspecifier, utt2spk_rspecifier;
 
     kaldi::ParseOptions po(usage);
     po.Register("old-acoustic-scale", &old_acoustic_scale,
@@ -59,6 +59,7 @@ int main(int argc, char *argv[]) {
                 "rspecifier for utterance to speaker map");
     po.Register("gselect", &gselect_rspecifier,
                 "Precomputed Gaussian indices (rspecifier)");
+    po.Register("gammar", &gammar_rspecifier, "Precomputed DNN-UBM posteriors (rspecifier)");
     po.Register("speedup", &speedup,
                 "If true, enable a faster version of the computation that "
                 "saves times when there is only one pdf-id on a single frame "
@@ -90,6 +91,7 @@ int main(int argc, char *argv[]) {
     }
 
     RandomAccessInt32VectorVectorReader gselect_reader(gselect_rspecifier);
+     RandomAccessBaseFloatMatrixReader gammar_reader(gammar_rspecifier);
     RandomAccessBaseFloatVectorReaderMapped spkvecs_reader(spkvecs_rspecifier,
                                                            utt2spk_rspecifier);
     RandomAccessBaseFloatMatrixReader feature_reader(feature_rspecifier);
@@ -137,8 +139,11 @@ int main(int argc, char *argv[]) {
       const std::vector<std::vector<int32> > &gselect =
           gselect_reader.Value(utt);
 
+      const Matrix<BaseFloat>  &gammar = 
+	gammar_reader.Value(utt);
+	    
       DecodableAmSgmm2 sgmm2_decodable(am_sgmm, trans_model, feats,
-                                       gselect, log_prune, &spk_vars);
+                                       gselect, gammar, log_prune, &spk_vars);
 
       if (!speedup) {
         if (kaldi::RescoreCompactLattice(&sgmm2_decodable, &clat)) {

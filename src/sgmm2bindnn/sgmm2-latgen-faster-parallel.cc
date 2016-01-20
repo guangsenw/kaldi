@@ -24,11 +24,11 @@ using std::string;
 
 #include "base/kaldi-common.h"
 #include "util/common-utils.h"
-#include "sgmm2/am-sgmm2.h"
+#include "sgmm2dnn/am-sgmm2.h"
 #include "hmm/transition-model.h"
 #include "fstext/fstext-lib.h"
 #include "decoder/decoder-wrappers.h"
-#include "sgmm2/decodable-am-sgmm2.h"
+#include "sgmm2dnn/decodable-am-sgmm2.h"
 #include "thread/kaldi-task-sequence.h"
 #include "base/timer.h"
 
@@ -42,6 +42,7 @@ void ProcessUtterance(const AmSgmm2 &am_sgmm,
                       double acoustic_scale,
                       const Matrix<BaseFloat> &features,
                       RandomAccessInt32VectorVectorReader &gselect_reader,
+		      RandomAccessBaseFloatMatrixReader &gammar_reader,
                       RandomAccessBaseFloatVectorReaderMapped &spkvecs_reader,
                       const fst::SymbolTable *word_syms,
                       const std::string &utt,
@@ -83,12 +84,14 @@ void ProcessUtterance(const AmSgmm2 &am_sgmm,
   vector<vector<int32> > *gselect = new std::vector<vector<int32> >(
       gselect_reader.Value(utt));
 
+  VectorBase<BaseFloat>  *gammar = 
+      gammar_reader.Value(utt);
   Matrix<BaseFloat> *new_feats = new Matrix<BaseFloat>(features); // decodable
   // will take ownership of this.
 
   // This takes ownership of new_feats, gselect, and spk_vars
   DecodableAmSgmm2Scaled *sgmm_decodable = new DecodableAmSgmm2Scaled(
-      am_sgmm, trans_model, new_feats, gselect,
+      am_sgmm, trans_model, new_feats, gselect,gammar,
       spk_vars, log_prune, acoustic_scale);
 
   // takes ownership of decoder and sgmm_decodable.
@@ -121,7 +124,7 @@ int main(int argc, char *argv[]) {
     BaseFloat acoustic_scale = 0.1;
     bool allow_partial = false;
     BaseFloat log_prune = 5.0;
-    string word_syms_filename, gselect_rspecifier, spkvecs_rspecifier,
+    string word_syms_filename, gselect_rspecifier, gammar_rspecifier, spkvecs_rspecifier,
         utt2spk_rspecifier;
 
     LatticeFasterDecoderConfig decoder_opts;
@@ -139,6 +142,7 @@ int main(int argc, char *argv[]) {
                 "Produce output even when final state was not reached");
     po.Register("gselect", &gselect_rspecifier,
                 "rspecifier for precomputed per-frame Gaussian indices.");
+    po.Register("gammar", &gammar_rspecifier, "Precomputed DNN-UBM posteriors (rspecifier)");
     po.Register("spk-vecs", &spkvecs_rspecifier,
                 "rspecifier for speaker vectors");
     po.Register("utt2spk", &utt2spk_rspecifier,
@@ -196,6 +200,7 @@ int main(int argc, char *argv[]) {
                   << word_syms_filename;
 
     RandomAccessInt32VectorVectorReader gselect_reader(gselect_rspecifier);
+    RandomAccessBaseFloatMatrixReader gammar_reader(gammar_rspecifier);
     RandomAccessBaseFloatVectorReaderMapped spkvecs_reader(spkvecs_rspecifier,
                                                            utt2spk_rspecifier);
         
@@ -224,7 +229,7 @@ int main(int argc, char *argv[]) {
               *decode_fst, decoder_opts);
 
           ProcessUtterance(am_sgmm, trans_model, log_prune, acoustic_scale,
-                           features, gselect_reader, spkvecs_reader, word_syms,
+                           features, gselect_reader, gammar_reader, spkvecs_reader, word_syms,
                            utt, determinize, allow_partial,
                            &alignment_writer, &words_writer, &compact_lattice_writer,
                            &lattice_writer, decoder, &tot_like, &frame_count,
@@ -258,7 +263,7 @@ int main(int argc, char *argv[]) {
 
         // ProcessUtterance takes ownership of "decoder".
         ProcessUtterance(am_sgmm, trans_model, log_prune, acoustic_scale,
-                         features, gselect_reader, spkvecs_reader, word_syms,
+                         features, gselect_reader, gammar_reader, spkvecs_reader, word_syms,
                          utt, determinize, allow_partial,
                          &alignment_writer, &words_writer, &compact_lattice_writer,
                          &lattice_writer, decoder, &tot_like, &frame_count,

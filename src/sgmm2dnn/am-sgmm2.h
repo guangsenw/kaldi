@@ -569,6 +569,7 @@ struct Sgmm2GauPostElement {
   // Need gselect info here, since "posteriors" is  relative to this set of
   // selected Gaussians.
   std::vector<int32> gselect;
+  VectorBase<BaseFloat> gamma;
   std::vector<int32> tids;  // transition-ids for each entry in "posteriors"
   std::vector<Matrix<BaseFloat> > posteriors;
 };

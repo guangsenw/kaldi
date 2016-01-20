@@ -23,7 +23,7 @@
 #include <vector>
 #include <queue>
 
-#include "sgmm2/am-sgmm2.h"
+#include "sgmm2dnn/am-sgmm2.h"
 
 namespace kaldi {
 

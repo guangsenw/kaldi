@@ -139,7 +139,8 @@ int main(int argc, char *argv[]) {
 
       for (size_t i = 0; i < gpost.size(); i++) {
         const std::vector<int32> &gselect = gpost[i].gselect;
-        am_sgmm.ComputePerFrameVars(mat.Row(i), gselect, spk_vars,
+	const VectorBase<BaseFloat> &gammar = gpost[i].gammar;
+        am_sgmm.ComputePerFrameVars(mat.Row(i), gselect, gammar, spk_vars,
                                     &per_frame_vars);
 
         for (size_t j = 0; j < gpost[i].tids.size(); j++) {

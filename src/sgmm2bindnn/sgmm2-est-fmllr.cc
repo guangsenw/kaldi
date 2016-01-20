@@ -60,7 +60,7 @@ void AccumulateForUtterance(const Matrix<BaseFloat> &feats,
                                   spk_vars, &posteriors);
       posteriors.Scale(pdf_post[t][j].second);
       spk_stats->AccumulateFromPosteriors(am_sgmm, *spk_vars, feats.Row(t),
-                                          gselect[t], gammar.Row(t), posteriors, pdf_id);
+                                          gselect[t], posteriors, pdf_id);
     }
   }
 }
