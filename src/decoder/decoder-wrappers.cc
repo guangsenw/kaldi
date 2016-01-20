@@ -23,9 +23,6 @@
 namespace kaldi {
 
 
-
-
-
 DecodeUtteranceLatticeFasterClass::DecodeUtteranceLatticeFasterClass(
     LatticeFasterDecoder *decoder,
     DecodableInterface *decodable,
