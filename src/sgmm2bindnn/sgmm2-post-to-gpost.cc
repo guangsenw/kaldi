@@ -138,7 +138,7 @@ int main(int argc, char *argv[]) {
                                     spk_vars, &per_frame_vars);
 
         gpost[i].gselect = gselect[i];
-	gpost[i].gammar =  gammar.Row(i);
+	gpost[i].gamma =  gammar.Row(i);
         gpost[i].tids.resize(posterior[i].size());
         gpost[i].posteriors.resize(posterior[i].size());
 

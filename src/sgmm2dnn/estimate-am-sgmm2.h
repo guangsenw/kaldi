@@ -27,7 +27,7 @@
 #include <string>
 #include <vector>
 
-#include "sgmm2/am-sgmm2.h"
+#include "sgmm2dnn/am-sgmm2.h"
 #include "gmm/model-common.h"
 #include "itf/options-itf.h"
 #include "thread/kaldi-thread.h"

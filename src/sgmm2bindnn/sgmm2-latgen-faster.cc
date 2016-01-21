@@ -74,7 +74,7 @@ bool ProcessUtterance(LatticeFasterDecoder &decoder,
 
   const std::vector<std::vector<int32> > &gselect =
       gselect_reader.Value(utt);
-  const VectorBase<BaseFloat> & gammar = 
+  const Matrix<BaseFloat> & gammar = 
       gammar_reader.Value(utt);
   DecodableAmSgmm2Scaled sgmm_decodable(am_sgmm, trans_model, features, gselect, gammar,
                                         log_prune, acoustic_scale, &spk_vars);
@@ -204,7 +204,7 @@ int main(int argc, char *argv[]) {
           }
           double like;
           if (ProcessUtterance(decoder, am_sgmm, trans_model, log_prune, acoustic_scale,
-                               features, gselect_reader, gammar_reader, word_syms,
+                               features, gselect_reader, gammar_reader, spkvecs_reader, word_syms,
                                utt, determinize, allow_partial,
                                &alignment_writer, &words_writer, &compact_lattice_writer,
                                &lattice_writer, &like)) {
@@ -239,7 +239,7 @@ int main(int argc, char *argv[]) {
         double like;
 
         if (ProcessUtterance(decoder, am_sgmm, trans_model, log_prune, acoustic_scale,
-                             features, gselect_reader, gammar_reader, word_syms,
+                             features, gselect_reader, gammar_reader, spkvecs_reader, word_syms,
                              utt, determinize, allow_partial,
                              &alignment_writer, &words_writer, &compact_lattice_writer,
                              &lattice_writer, &like)) {

@@ -84,8 +84,8 @@ void ProcessUtterance(const AmSgmm2 &am_sgmm,
   vector<vector<int32> > *gselect = new std::vector<vector<int32> >(
       gselect_reader.Value(utt));
 
-  VectorBase<BaseFloat>  *gammar = 
-      gammar_reader.Value(utt);
+  Matrix<BaseFloat>  *gammar = new Matrix<BaseFloat>(
+      gammar_reader.Value(utt));
   Matrix<BaseFloat> *new_feats = new Matrix<BaseFloat>(features); // decodable
   // will take ownership of this.
 

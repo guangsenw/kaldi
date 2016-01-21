@@ -26,8 +26,8 @@ using std::vector;
 
 #include "base/kaldi-common.h"
 #include "util/common-utils.h"
-#include "sgmm2/am-sgmm2.h"
-#include "sgmm2/estimate-am-sgmm2.h"
+#include "sgmm2dnn/am-sgmm2.h"
+#include "sgmm2dnn/estimate-am-sgmm2.h"
 #include "hmm/transition-model.h"
 #include "hmm/posterior.h"
 
@@ -47,7 +47,7 @@ void AccumulateForUtterance(const Matrix<BaseFloat> &feats,
   Posterior pdf_post;
   ConvertPosteriorToPdfs(trans_model, post, &pdf_post);
   for (size_t i = 0; i < post.size(); i++) {
-    am_sgmm.ComputePerFrameVars(feats.Row(i), gselect[i],gammar.Row(i),
+    am_sgmm.ComputePerFrameVars(feats.Row(i), gselect[i], gammar.Row(i),
                                 *spk_vars, &per_frame_vars);
     
     for (size_t j = 0; j < pdf_post[i].size(); j++) {

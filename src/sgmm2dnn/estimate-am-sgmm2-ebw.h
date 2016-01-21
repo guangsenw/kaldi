@@ -25,7 +25,7 @@
 
 #include "gmm/model-common.h"
 #include "itf/options-itf.h"
-#include "sgmm2/estimate-am-sgmm2.h"
+#include "sgmm2dnn/estimate-am-sgmm2.h"
 
 namespace kaldi {
 

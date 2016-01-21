@@ -18,7 +18,7 @@
 // limitations under the License.
 
 #include "base/kaldi-common.h"
-#include "sgmm2/estimate-am-sgmm2-ebw.h"
+#include "sgmm2dnn/estimate-am-sgmm2-ebw.h"
 #include "thread/kaldi-thread.h"
 using std::vector;
 

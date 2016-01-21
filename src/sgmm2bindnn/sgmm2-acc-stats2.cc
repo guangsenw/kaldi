@@ -182,7 +182,7 @@ int main(int argc, char *argv[]) {
           continue;
 	//const SubVector<BaseFloat> gammarti = gammar.Row(i);
 	// pre-compute the per frame variables including the ubm-dnn posteriors
-        am_sgmm.ComputePerFrameVars(features.Row(i), gselect[i], gammar.Row(i),
+        am_sgmm.ComputePerFrameVars(features.Row(i), gselect[i], gammar.Row(i), spk_vars,
                                     &per_frame_vars);
         
         for (size_t j = 0; j < posterior[i].size(); j++) {

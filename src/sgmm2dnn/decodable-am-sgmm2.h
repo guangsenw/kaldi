@@ -36,7 +36,7 @@ class DecodableAmSgmm2 : public DecodableInterface {
                    const TransitionModel &tm,
                    const Matrix<BaseFloat> &feats,
                    const std::vector<std::vector<int32> > &gselect,
-		    const Matrix<BaseFloat>  &gammar,
+		   const Matrix<BaseFloat>  &gammar,
                    BaseFloat log_prune,
                    Sgmm2PerSpkDerivedVars *spk):
       sgmm_(sgmm), spk_(spk),
@@ -84,7 +84,7 @@ class DecodableAmSgmm2 : public DecodableInterface {
   const TransitionModel &trans_model_;  ///< for tid to pdf mapping
   const Matrix<BaseFloat> *feature_matrix_;
   const std::vector<std::vector<int32> > *gselect_; 
-   const Matrix<BaseFloat>  *gammar_;
+  const Matrix<BaseFloat>  *gammar_;
   
   BaseFloat log_prune_;
   

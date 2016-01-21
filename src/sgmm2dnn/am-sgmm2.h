@@ -141,7 +141,7 @@ struct Sgmm2GselectConfig {
  */
 struct Sgmm2PerFrameDerivedVars {
   std::vector<int32> gselect;
-  VectorBase<BaseFloat> gammar;	/// the new DNN/UBM senome posterior vector for the current frame
+  Vector<BaseFloat> gammar;	/// the new DNN/UBM senone posterior vector for the current frame
 							/// to be multiplied by the new normlizer without c_jmi and w_jmi
 							
   Vector<BaseFloat> xt;   ///< x'(t), FMLLR-adapted, dim = [D], eq.(33)
@@ -285,9 +285,11 @@ class AmSgmm2 {
                            Sgmm2PerFrameDerivedVars *per_frame_vars) const;
 
 /// overload the previous ComputePerFrameVars to take the ubm-dnn posteriors
+/// This needs to be called with each new frame of data, prior to accumulation
+  /// or likelihood evaluation: it computes various pre-computed quantities.
 void ComputePerFrameVars(const VectorBase<BaseFloat> &data,
 			const std::vector<int32> &gselect,
-			const VectorBase<BaseFloat> &senome_posts,
+			const VectorBase<BaseFloat> &senone_posts,
 			const Sgmm2PerSpkDerivedVars &spk_vars,
 			Sgmm2PerFrameDerivedVars *per_frame_vars) const ;
 
@@ -569,7 +571,7 @@ struct Sgmm2GauPostElement {
   // Need gselect info here, since "posteriors" is  relative to this set of
   // selected Gaussians.
   std::vector<int32> gselect;
-  VectorBase<BaseFloat> gamma;
+  Vector<BaseFloat> gamma;
   std::vector<int32> tids;  // transition-ids for each entry in "posteriors"
   std::vector<Matrix<BaseFloat> > posteriors;
 };
