@@ -541,23 +541,29 @@ void AmSgmm2::ComponentLogLikes(const Sgmm2PerFrameDerivedVars &per_frame_vars,
     // for all substates, compute z_{i}^T v_{jm}
     logp_xi.AddMatVec(1.0, v_[j1], kNoTrans, per_frame_vars.zti.Row(ki), 0.0);
     // new the normalizer n_[j1].Row(i) is added
-    Vector<BaseFloat> normalizer ;
-    
-    normalizer.CopyFromVec(n_[j1].Row(i));// now normalizer is a vector of normalizers for triphone cluster j1 and UBM gaussian i
-    normalizer.Scale(gammarti(i));// scale the vector of normalizers by its corresponding dnn-ubm posterior
-    //logp_xi.AddVec(1.0, n_[j1].Row(i));  // for all substates, add n_{jim}
-    logp_xi.AddVec(1.0, normalizer);  // for all substates, add the new normalizer without c_hmi and w_jmi multiplied by the posteriors
+    //Vector<BaseFloat> normalizer ;
+    //normalizer.Resize(n_[j1].NumCols());
+    //normalizer.CopyFromVec(n_[j1].Row(i));// now normalizer is a vector of normalizers for triphone cluster j1 and UBM gaussian i
+   //normalizer.Scale(gammarti(i));// scale the vector of normalizers by its corresponding dnn-ubm posterior
+    logp_xi.AddVec(gammarti(ki), n_[j1].Row(i));  // for all substates, add n_{jim}*gammarti(i)
+    //logp_xi.AddVec(1.0, normalizer);  // for all substates, add the new normalizer without c_hmi and w_jmi multiplied by the posteriors
     logp_xi.Add(per_frame_vars.nti(ki));  // for all substates, add n_{i}(t)
     // we also need to add log w_jmi to the likelihood term, the speaker dependent weights are added in the rest of the code
       /// [SSGMM] w_{jmi}, dimension is [J1][#mix][I].  Computed from w_ and v_.
     //std::vector< Matrix<BaseFloat> > w_jmi_;
     // a vector of all substates weights  w_{jmi} for all the i-th selected (UBM) Gaussian
-    Vector<BaseFloat> wjmi;
-    // make sure we have already computed w_jmi_ in ComputeWeights
+    Vector<BaseFloat> wjim;
+    Matrix<BaseFloat> wji;
     KALDI_ASSERT(!w_jmi_.empty());	
-    wjmi.CopyFromVec(w_jmi_[j1].Row(i));
-    wjmi.ApplyLog();
-    logp_xi.AddVec(1.0, wjmi);
+    wjim.Resize(w_jmi_[j1].NumRows(),w_jmi_[j1].NumCols());
+    wji.CopyFromMat(w_jmi_[j1]);
+    wji.Transpose();
+    //wjmi.Resize(w_jmi_[j1].NumRows());
+    // make sure we have already computed w_jmi_ in ComputeWeights
+    wjim.Resize(wji.NumCols());
+    wjim.CopyFromVec(wji.Row(i));
+    wjim.ApplyLog();
+    logp_xi.AddVec(1.0, wjim);
   }    
   if (speaker_dep_weights) { // [SSGMM] log_d as in eqn 25 in the SSGMM paper
     Vector<BaseFloat> &log_d = spk_vars->log_d_jms[j1];
@@ -990,8 +996,9 @@ void AmSgmm2::ComputeNormalizersInternal(int32 num_threads, int32 thread,
           BaseFloat tmp = n_[j1](i, m);
 	  // next we want to make sure the w_jmi_ contains the same weights as computed here
 	  BaseFloat compute_substate_weights = log_w_jm(m,i);
-	  BaseFloat precomputed_substate_weights = w_jmi_[j1](m,i);
-	  KALDI_ASSERT(std::abs(compute_substate_weights - precomputed_substate_weights) < 0.01);
+	  // there could be chances that w_jmi_ has not been computed!!!!e.g., in sgmm2-init######################
+	 // BaseFloat precomputed_substate_weights = w_jmi_[j1](m,i);
+	  //KALDI_ASSERT(std::abs(compute_substate_weights - precomputed_substate_weights) < 0.01);
           if (!KALDI_ISFINITE(tmp)) {  // NaN or inf
             KALDI_LOG << "Warning: normalizer for j1 = " << j1 << ", m = " << m
                       << ", i = " << i << " is infinite or NaN " << tmp << "= "
