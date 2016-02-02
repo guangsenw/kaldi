@@ -555,9 +555,9 @@ void AmSgmm2::ComponentLogLikes(const Sgmm2PerFrameDerivedVars &per_frame_vars,
     Vector<BaseFloat> wjim;
     Matrix<BaseFloat> wji;
     KALDI_ASSERT(!w_jmi_.empty());	
-    wjim.Resize(w_jmi_[j1].NumRows(),w_jmi_[j1].NumCols());
-    wji.CopyFromMat(w_jmi_[j1]);
-    wji.Transpose();
+    wji.Resize(w_jmi_[j1].NumCols(),w_jmi_[j1].NumRows());
+    // copy and transpose, wo that we can get the the vector of weights for each mixture of state j and ubm Gaussian i
+    wji.CopyFromMat(w_jmi_[j1], kTrans);
     //wjmi.Resize(w_jmi_[j1].NumRows());
     // make sure we have already computed w_jmi_ in ComputeWeights
     wjim.Resize(wji.NumCols());
@@ -997,8 +997,16 @@ void AmSgmm2::ComputeNormalizersInternal(int32 num_threads, int32 thread,
 	  // next we want to make sure the w_jmi_ contains the same weights as computed here
 	  BaseFloat compute_substate_weights = log_w_jm(m,i);
 	  // there could be chances that w_jmi_ has not been computed!!!!e.g., in sgmm2-init######################
-	 // BaseFloat precomputed_substate_weights = w_jmi_[j1](m,i);
-	  //KALDI_ASSERT(std::abs(compute_substate_weights - precomputed_substate_weights) < 0.01);
+	 
+	  /*
+	   * Check whether the stored w_jmi_ is actually the same as the one computed here, confirmed they are the same as
+	   * the abs diff is 1.16415e-10 by running the debug
+
+	  ComputeWeights();
+	 BaseFloat precomputed_substate_weights = w_jmi_[j1](m,i);
+	 std::cout << std::abs( std::exp(compute_substate_weights) -(precomputed_substate_weights)) <<std::endl;
+//	 KALDI_ASSERT(std::abs(compute_substate_weights - std::exp(precomputed_substate_weights)) < 0.01);
+	 */
           if (!KALDI_ISFINITE(tmp)) {  // NaN or inf
             KALDI_LOG << "Warning: normalizer for j1 = " << j1 << ", m = " << m
                       << ", i = " << i << " is infinite or NaN " << tmp << "= "
@@ -1527,6 +1535,11 @@ void Sgmm2GauPost::Write(std::ostream &os, bool binary) const {
   for (int32 t = 0; t < T; t++) {
     WriteToken(os, binary, "<gselect>");
     WriteIntegerVector(os, binary, (*this)[t].gselect);
+    
+    /* we need to write the gammar vector as well
+    WriteToken(os, binary, "<gammar>");
+    WriteVector(os, binary, (*this)[t].gammar);
+    */
     WriteToken(os, binary, "<tids>");
     WriteIntegerVector(os, binary, (*this)[t].tids);
     KALDI_ASSERT((*this)[t].tids.size() == (*this)[t].posteriors.size());
@@ -1547,6 +1560,11 @@ void Sgmm2GauPost::Read(std::istream &is, bool binary) {
   for (int32 t = 0; t < T; t++) {
     ExpectToken(is, binary, "<gselect>");
     ReadIntegerVector(is, binary, &((*this)[t].gselect));
+    
+    /* Read the gammar vector
+    ExpectToken(os, binary, "<gammar>");
+    ReadIntegerVector(os, binary, (*this)[t].gammar);
+    */
     ExpectToken(is, binary, "<tids>");
     ReadIntegerVector(is, binary, &((*this)[t].tids));
     size_t sz = (*this)[t].tids.size();

@@ -37,7 +37,7 @@ int main(int argc, char *argv[]) {
 
     ParseOptions po(usage);
     bool binary = true;
-    std::string spkvecs_rspecifier, utt2spk_rspecifier;
+    std::string spkvecs_rspecifier, utt2spk_rspecifier, gammar_rspecifier;
     std::string update_flags_str = "vMNwcSt";
     BaseFloat rand_prune = 1.0e-05;
 
@@ -45,6 +45,7 @@ int main(int argc, char *argv[]) {
     po.Register("spk-vecs", &spkvecs_rspecifier, "Speaker vectors (rspecifier)");
     po.Register("utt2spk", &utt2spk_rspecifier,
                 "rspecifier for utterance to speaker map");
+    po.Register("gammar", &gammar_rspecifier, "Precomputed DNN-UBM posteriors (rspecifier)");
     po.Register("rand-prune", &rand_prune, "Pruning threshold for posteriors");
     po.Register("update-flags", &update_flags_str, "Which SGMM parameters to update: subset of vMNwcS.");
     po.Read(argc, argv);
@@ -56,6 +57,9 @@ int main(int argc, char *argv[]) {
       exit(1);
     }
 
+    if (gammar_rspecifier == "")
+      KALDI_ERR << "--gammar option is required";
+    
     std::string model_filename = po.GetArg(1),
         feature_rspecifier = po.GetArg(2),
         gpost_rspecifier = po.GetArg(3),
@@ -71,6 +75,8 @@ int main(int argc, char *argv[]) {
     RandomAccessBaseFloatVectorReaderMapped spkvecs_reader(spkvecs_rspecifier,
                                                            utt2spk_rspecifier);
     RandomAccessTokenReader utt2spk_map(utt2spk_rspecifier);
+    
+    RandomAccessBaseFloatMatrixReader gammar_reader(gammar_rspecifier);
     
     AmSgmm2 am_sgmm;
     TransitionModel trans_model;
@@ -134,13 +140,16 @@ int main(int argc, char *argv[]) {
       }
       const Sgmm2GauPost &gpost = gpost_reader.Value(utt);
       
+      const Matrix<BaseFloat>  &gammar = 
+	gammar_reader.Value(utt);
+	
       num_done++;
       BaseFloat tot_weight = 0.0;
 
       for (size_t i = 0; i < gpost.size(); i++) {
         const std::vector<int32> &gselect = gpost[i].gselect;
-	const VectorBase<BaseFloat> &gammar = gpost[i].gamma;
-        am_sgmm.ComputePerFrameVars(mat.Row(i), gselect, gammar, spk_vars,
+	//const VectorBase<BaseFloat> &gammar = gpost[i].gamma;
+        am_sgmm.ComputePerFrameVars(mat.Row(i), gselect, gammar.Row(i), spk_vars,
                                     &per_frame_vars);
 
         for (size_t j = 0; j < gpost[i].tids.size(); j++) {
