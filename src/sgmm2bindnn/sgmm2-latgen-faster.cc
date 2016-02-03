@@ -149,7 +149,9 @@ int main(int argc, char *argv[]) {
       trans_model.Read(ki.Stream(), binary);
       am_sgmm.Read(ki.Stream(), binary);
     }
-
+    // compute weights so that in ComponentLogLikes we can use w_jmi_
+    am_sgmm.ComputeWeights();
+    
     CompactLatticeWriter compact_lattice_writer;
     LatticeWriter lattice_writer;
     bool determinize = decoder_opts.determinize_lattice;    

@@ -505,10 +505,13 @@ void AmSgmm2::ComputePerFrameVars(const VectorBase<BaseFloat> &data,
     BaseFloat ssgmm_term = (speaker_dep_weights ? spk_vars.log_b_is(i) : 0.0);
     SigmaInv_xt.AddSpVec(1.0, SigmaInv_[i], per_frame_vars->xti.Row(ki), 0.0);
     // Eq (35): z_{i}(t) = M_{i}^{T} \Sigma_{i}^{-1} x_{i}(t)
-    per_frame_vars->zti.Row(ki).AddMatVec(1.0, M_[i], kTrans, SigmaInv_xt, 0.0);
+    //per_frame_vars->zti.Row(ki).AddMatVec(1.0, M_[i], kTrans, SigmaInv_xt, 0.0);
+    // scale by the DNN-UBM posteriors
+    per_frame_vars->zti.Row(ki).AddMatVec(senone_posts(ki), M_[i], kTrans, SigmaInv_xt, 0.0);
     // Eq.(36): n_{i}(t) = -0.5 x_{i}^{T} \Sigma_{i}^{-1} x_{i}(t)
-    per_frame_vars->nti(ki) = -0.5 * VecVec(per_frame_vars->xti.Row(ki),
-                                            SigmaInv_xt) + ssgmm_term;
+    //per_frame_vars->nti(ki) = -0.5 * VecVec(per_frame_vars->xti.Row(ki), SigmaInv_xt) + ssgmm_term;
+    // scale nti with DNN-UBM posteriors
+    per_frame_vars->nti(ki) = senone_posts(ki) * (-0.5 * VecVec(per_frame_vars->xti.Row(ki), SigmaInv_xt) + ssgmm_term);
   }
 }
 
@@ -538,7 +541,7 @@ void AmSgmm2::ComponentLogLikes(const Sgmm2PerFrameDerivedVars &per_frame_vars,
   for (int32 ki = 0;  ki < num_gselect; ki++) {
     SubVector<BaseFloat> logp_xi(*loglikes, ki);
     int32 i = gselect[ki];
-    // for all substates, compute z_{i}^T v_{jm}
+    // for all substates, compute z_{i}^T v_{jm}, zti has been scaled in ComputePerFrameVars by DNN-UBM posterior
     logp_xi.AddMatVec(1.0, v_[j1], kNoTrans, per_frame_vars.zti.Row(ki), 0.0);
     // new the normalizer n_[j1].Row(i) is added
     //Vector<BaseFloat> normalizer ;
@@ -547,18 +550,32 @@ void AmSgmm2::ComponentLogLikes(const Sgmm2PerFrameDerivedVars &per_frame_vars,
    //normalizer.Scale(gammarti(i));// scale the vector of normalizers by its corresponding dnn-ubm posterior
     logp_xi.AddVec(gammarti(ki), n_[j1].Row(i));  // for all substates, add n_{jim}*gammarti(i)
     //logp_xi.AddVec(1.0, normalizer);  // for all substates, add the new normalizer without c_hmi and w_jmi multiplied by the posteriors
-    logp_xi.Add(per_frame_vars.nti(ki));  // for all substates, add n_{i}(t)
+    logp_xi.Add(per_frame_vars.nti(ki));  // for all substates, add n_{i}(t) (scaled in ComputePerFrameVars by DNN-UBM posterior )
     // we also need to add log w_jmi to the likelihood term, the speaker dependent weights are added in the rest of the code
       /// [SSGMM] w_{jmi}, dimension is [J1][#mix][I].  Computed from w_ and v_.
     //std::vector< Matrix<BaseFloat> > w_jmi_;
     // a vector of all substates weights  w_{jmi} for all the i-th selected (UBM) Gaussian
     Vector<BaseFloat> wjim;
     Matrix<BaseFloat> wji;
-    KALDI_ASSERT(!w_jmi_.empty());	
-    wji.Resize(w_jmi_[j1].NumCols(),w_jmi_[j1].NumRows());
-    // copy and transpose, wo that we can get the the vector of weights for each mixture of state j and ubm Gaussian i
-    wji.CopyFromMat(w_jmi_[j1], kTrans);
-    //wjmi.Resize(w_jmi_[j1].NumRows());
+    
+    // if the weights haven't been computed
+    if (w_jmi_.empty()) {
+      Matrix<BaseFloat> wmi_;
+      int32 num_gauss = NumGauss();
+      int32 M = NumSubstatesForGroup(j1);
+      wmi_.Resize(M,num_gauss);
+      wmi_.AddMatMat(1.0, v_[j1], kNoTrans, w_, kTrans, 0.0);
+      for (int32 m = 0; m < M; m++)
+         wmi_.Row(m).ApplySoftMax(); // get the actual weights.
+      wji.Resize(wmi_.NumCols(),wmi_.NumRows()); 
+      wji.CopyFromMat(wmi_, kTrans);
+    }
+    else{
+      wji.Resize(w_jmi_[j1].NumCols(),w_jmi_[j1].NumRows());
+      // copy and transpose, wo that we can get the the vector of weights for each mixture of state j and ubm Gaussian i
+      wji.CopyFromMat(w_jmi_[j1], kTrans);
+    }
+   
     // make sure we have already computed w_jmi_ in ComputeWeights
     wjim.Resize(wji.NumCols());
     wjim.CopyFromVec(wji.Row(i));
