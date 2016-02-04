@@ -556,10 +556,10 @@ void AmSgmm2::ComponentLogLikes(const Sgmm2PerFrameDerivedVars &per_frame_vars,
     //std::vector< Matrix<BaseFloat> > w_jmi_;
     // a vector of all substates weights  w_{jmi} for all the i-th selected (UBM) Gaussian
     Vector<BaseFloat> wjim;
-    Matrix<BaseFloat> wji;
-    
-    // if the weights haven't been computed
-    if (w_jmi_.empty()) {
+    //Make sure w_jim_ is not empty, if so, need to call ComputeWeights in the calling function
+    KALDI_ASSERT(!log_w_jim_.empty());
+    // the original code in the following is very costly since each frame, a transpose operation is used
+   /* if (w_jim_.empty()) {
       Matrix<BaseFloat> wmi_;
       int32 num_gauss = NumGauss();
       int32 M = NumSubstatesForGroup(j1);
@@ -575,11 +575,11 @@ void AmSgmm2::ComponentLogLikes(const Sgmm2PerFrameDerivedVars &per_frame_vars,
       // copy and transpose, wo that we can get the the vector of weights for each mixture of state j and ubm Gaussian i
       wji.CopyFromMat(w_jmi_[j1], kTrans);
     }
-   
+   */
     // make sure we have already computed w_jmi_ in ComputeWeights
-    wjim.Resize(wji.NumCols());
-    wjim.CopyFromVec(wji.Row(i));
-    wjim.ApplyLog();
+    wjim.Resize(log_w_jim_[j1].NumCols());
+    wjim.CopyFromVec(log_w_jim_[j1].Row(i));
+    //wjim.ApplyLog();
     logp_xi.AddVec(1.0, wjim);
   }    
   if (speaker_dep_weights) { // [SSGMM] log_d as in eqn 25 in the SSGMM paper
@@ -878,15 +878,22 @@ void AmSgmm2::IncreaseSpkSpaceDim(int32 target_dim,
 void AmSgmm2::ComputeWeights() {
   int32 J1 = NumGroups();
   w_jmi_.resize(J1);
+  log_w_jim_.resize(J1);
   int32 i = NumGauss();
   for (int32 j1 = 0; j1 < J1; j1++) {
     int32 M = NumSubstatesForGroup(j1);
     w_jmi_[j1].Resize(M, i);
+    log_w_jim_[j1].Resize(i, M);
     w_jmi_[j1].AddMatMat(1.0, v_[j1], kNoTrans, w_, kTrans, 0.0);
     // now w_jmi_ contains un-normalized log weights.
     for (int32 m = 0; m < M; m++)
       w_jmi_[j1].Row(m).ApplySoftMax(); // get the actual weights.
+    log_w_jim_[j1].CopyFromMat(w_jmi_[j1], kTrans);  
+    // now we apply log on all the rows of log_w_jim_ since log weights are needed in ComponentLogLikes
+    for (int32 ki = 0; ki < i; ki ++)
+	    log_w_jim_[j1].Row(ki).ApplyLog();
   }
+  
 }
 
 void AmSgmm2::ComputeDerivedVars() {

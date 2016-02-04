@@ -453,6 +453,10 @@ void ComputePerFrameVars(const VectorBase<BaseFloat> &data,
   /// [SSGMM] w_{jmi}, dimension is [J1][#mix][I].  Computed from w_ and v_.
   std::vector< Matrix<BaseFloat> > w_jmi_;
 
+  /// log_w_jim_ for storing the weights of the DNN-SGMM system, each element of
+  /// the vector is just the transpose of w_jmi_[i] and apply row-wise log operation
+  std::vector< Matrix<BaseFloat> > log_w_jim_;
+  
   // Priors for MAP adaptation of M -- keeping them here for now but they may
   // be moved somewhere else eventually
   // These are parameters of a matrix-variate normal distribution. The means are
