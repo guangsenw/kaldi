@@ -72,6 +72,8 @@ int main(int argc, char *argv[]) {
       am_sgmm.Read(ki.Stream(), binary);
     }
 
+    am_sgmm.ComputeWeights();
+    
     double tot_like = 0.0;
     kaldi::int64 tot_t = 0;
 

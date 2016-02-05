@@ -73,8 +73,8 @@ int main(int argc, char *argv[]) {
       po.PrintUsage();
       exit(1);
     }
-    if (gselect_rspecifier == "")
-      KALDI_ERR << "--gselect-rspecifier option is required.";
+    if (gselect_rspecifier == "" || gammar_rspecifier == "")
+      KALDI_ERR << "--gselect-rspecifier and --gammar option is required.";
 
     std::string model_filename = po.GetArg(1),
         lats_rspecifier = po.GetArg(2),
