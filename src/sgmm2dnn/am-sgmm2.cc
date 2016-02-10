@@ -448,11 +448,14 @@ void AmSgmm2::ComputePerFrameVars(const VectorBase<BaseFloat> &data,
   per_frame_vars->Resize(gselect.size(), FeatureDim(), PhoneSpaceDim());
 
   per_frame_vars->gselect = gselect;
+  // copy input features to initialize per_frame_vars
   per_frame_vars->xt.CopyFromVec(data);
 
+  /// compute x_i(t) = x'(t) - o_i^s
   for (int32 ki = 0, last = gselect.size(); ki < last; ki++) {
     int32 i = gselect[ki];
     per_frame_vars->xti.Row(ki).CopyFromVec(per_frame_vars->xt);
+
     if (spk_vars.v_s.Dim() != 0)
       per_frame_vars->xti.Row(ki).AddVec(-1.0, spk_vars.o_s.Row(i));
   }
@@ -491,7 +494,10 @@ void AmSgmm2::ComputePerFrameVars(const VectorBase<BaseFloat> &data,
   // for all the selected Gaussians, compute xti
   for (int32 ki = 0, last = gselect.size(); ki < last; ki++) {
     int32 i = gselect[ki];
+     // copy input features to initialize per_frame_vars
     per_frame_vars->xti.Row(ki).CopyFromVec(per_frame_vars->xt);
+    // if using speaker vectors, we need to minus the speaker offset spk_vars.o_s.Row(i) from the raw feature vector or the CMLLR features
+    // equation 34
     if (spk_vars.v_s.Dim() != 0)
       per_frame_vars->xti.Row(ki).AddVec(-1.0, spk_vars.o_s.Row(i));
   }
@@ -511,7 +517,7 @@ void AmSgmm2::ComputePerFrameVars(const VectorBase<BaseFloat> &data,
     // Eq.(36): n_{i}(t) = -0.5 x_{i}^{T} \Sigma_{i}^{-1} x_{i}(t)
     //per_frame_vars->nti(ki) = -0.5 * VecVec(per_frame_vars->xti.Row(ki), SigmaInv_xt) + ssgmm_term;
     // scale nti with DNN-UBM posteriors
-    per_frame_vars->nti(ki) = senone_posts(ki) * (-0.5 * VecVec(per_frame_vars->xti.Row(ki), SigmaInv_xt) + ssgmm_term);
+    per_frame_vars->nti(ki) = senone_posts(ki) * (-0.5 * VecVec(per_frame_vars->xti.Row(ki), SigmaInv_xt)) + ssgmm_term;
   }
 }
 
