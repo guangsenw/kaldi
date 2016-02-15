@@ -1,0 +1,80 @@
+[Buildset]
+BuildItems=@Variant(\x00\x00\x00\t\x00\x00\x00\x00\x01\x00\x00\x00\x0b\x00\x00\x00\x00\x01\x00\x00\x00\x06\x00s\x00r\x00c)
+
+[Launch]
+Launch Configurations=Launch Configuration 0,Launch Configuration 1,Launch Configuration 2,Launch Configuration 3
+
+[Launch][Launch Configuration 0]
+Configured Launch Modes=execute
+Configured Launchers=nativeAppLauncher
+Name=sgmm2-acc-stats
+Type=Native Application
+
+[Launch][Launch Configuration 0][Data]
+Arguments=--utt2spk=ark:debug/utt2spk --update-flags=vwSct '--gselect=ark,s,cs:gunzip -c debug/dnn.gselect.1.gz|' '--gammar=ark,s,cs:gunzip -c debug/ubm-posterior-1.gz|' --rand-prune=0.1 debug/2.mdl scp:debug/feats.scp 'ark,s,cs:gunzip -c debug/ali.1.gz | src/bin/ali-to-post ark:- ark:-|' debug/2.1.acc
+Dependencies=@Variant(\x00\x00\x00\t\x00\x00\x00\x00\x00)
+Dependency Action=Nothing
+EnvironmentGroup=default
+Executable=file:///home/vincent/projects/kaldi/src/sgmm2bindnn/sgmm2-acc-stats
+External Terminal=konsole --noclose --workdir %workdir -e %exe
+Project Target=
+Use External Terminal=false
+Working Directory=file:///home/vincent/projects/kaldi
+isExecutable=true
+
+[Launch][Launch Configuration 1]
+Configured Launch Modes=execute
+Configured Launchers=nativeAppLauncher
+Name=sgmm-init (computenormalizer)
+Type=Native Application
+
+[Launch][Launch Configuration 1][Data]
+Arguments=--spk-dep-weights=true --self-weight=0.9 --pdf-map=debug/pdf2group.map --phn-space-dim=41 --spk-space-dim=40 debug/topo debug/tree debug/final.ubm debug/0.mdl
+Dependencies=@Variant(\x00\x00\x00\t\x00\x00\x00\x00\x00)
+Dependency Action=Nothing
+EnvironmentGroup=default
+Executable=file:///home/vincent/projects/kaldi/src/sgmm2bindnn/sgmm2-init
+External Terminal=konsole --noclose --workdir %workdir -e %exe
+Project Target=
+Use External Terminal=false
+Working Directory=file:///home/vincent/projects/kaldi/
+isExecutable=true
+
+[Launch][Launch Configuration 2]
+Configured Launch Modes=execute
+Configured Launchers=nativeAppLauncher
+Name=sgmm2-post-to-gpost
+Type=Native Application
+
+[Launch][Launch Configuration 2][Data]
+Arguments=\s'--gselect=ark,s,cs:gunzip -c dnn.gselect.1.gz|' '--gammar=ark,s,cs:gunzip -c ubm-posterior-1.gz|' --utt2spk=ark:utt2spk 25.mdl scp:feats1.scp ark,s,cs:post.1.ark ark:tmp.ark
+Dependencies=@Variant(\x00\x00\x00\t\x00\x00\x00\x00\x00)
+Dependency Action=Nothing
+EnvironmentGroup=default
+Executable=file:///home/vincent/projects/kaldi/src/sgmm2bindnn/sgmm2-post-to-gpost
+External Terminal=konsole --noclose --workdir %workdir -e %exe
+Project Target=
+Use External Terminal=false
+Working Directory=file:///home/vincent/projects/kaldi/sgmm2_dnn5b_top15
+isExecutable=true
+
+[Launch][Launch Configuration 3]
+Configured Launch Modes=execute
+Configured Launchers=nativeAppLauncher
+Name=sgmm2-latgen-faster
+Type=Native Application
+
+[Launch][Launch Configuration 3][Data]
+Arguments=--max-active=7000 --beam=13.0 --lattice-beam=6.0 --acoustic-scale=0.1 --determinize-lattice=false --allow-partial=true --word-symbol-table=decode/words.txt --max-mem=50000000 '--gselect=ark,s,cs:gunzip -c decode/dnn.gselect.1.gz| src/bin/copy-gselect --n=3 ark:- ark:- |' '--gammar=ark,s,cs:gunzip -c decode/ubm-posterior-1.gz| src/featbin/select-feats 0-2 ark:- ark:- |' decode/final.alimdl decode/HCLG.fst scp:decode/feats.scp 'ark:|gzip -c > decode/pre_lat.1.gz'
+Dependencies=@Variant(\x00\x00\x00\t\x00\x00\x00\x00\x00)
+Dependency Action=Nothing
+EnvironmentGroup=default
+Executable=file:///home/vincent/projects/kaldi/src/sgmm2bindnn/sgmm2-latgen-faster
+External Terminal=konsole --noclose --workdir %workdir -e %exe
+Project Target=
+Use External Terminal=false
+Working Directory=file:///home/vincent/projects/kaldi
+isExecutable=true
+
+[Project]
+VersionControlSupport=kdevgit
