@@ -73,19 +73,25 @@ int main(int argc, char *argv[]) {
 
     po.Read(argc, argv);
 
-    if (po.NumArgs() != 4) {
+  //  if (po.NumArgs() != 4) {
+   //   po.PrintUsage();
+   //   exit(1);
+   // }
+
+    if (po.NumArgs() < 4 || po.NumArgs() > 5) {
       po.PrintUsage();
       exit(1);
     }
-
+    
     if (gselect_rspecifier == "")
       KALDI_ERR << "--gselect option is mandatory.";
     
     std::string model_in_filename = po.GetArg(1),
         fst_rspecifier = po.GetArg(2),
         feature_rspecifier = po.GetArg(3),
-        alignment_wspecifier = po.GetArg(4);
-
+        alignment_wspecifier = po.GetArg(4),
+	scores_wspecifier = po.GetOptArg(5);
+	
     TransitionModel trans_model;
     AmSgmm2 am_sgmm;
     {
@@ -105,6 +111,8 @@ int main(int argc, char *argv[]) {
 
     Int32VectorWriter alignment_writer(alignment_wspecifier);
 
+    BaseFloatWriter scores_writer(scores_wspecifier);
+     
     int num_done = 0, num_err = 0, num_retry = 0;
     double tot_like = 0.0;
     kaldi::int64 frame_count = 0;
@@ -164,7 +172,7 @@ int main(int argc, char *argv[]) {
 
       AlignUtteranceWrapper(align_config, utt,
                             acoustic_scale, &decode_fst, &sgmm_decodable,
-                            &alignment_writer, NULL,
+                            &alignment_writer, &scores_writer,
                             &num_done, &num_err, &num_retry,
                             &tot_like, &frame_count);
       
