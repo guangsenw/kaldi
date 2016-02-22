@@ -18,7 +18,7 @@ TESTFILES =
 
 
 ADDLIBS =  ../decoder/kaldi-decoder.a ../lat/kaldi-lat.a ../feat/kaldi-feat.a \
-	../sgmm2dnn/kaldi-sgmm2.a ../transform/kaldi-transform.a ../gmm/kaldi-gmm.a \
+	../sgmm3dnn/kaldi-sgmm2.a ../transform/kaldi-transform.a ../gmm/kaldi-gmm.a \
 	../hmm/kaldi-hmm.a ../tree/kaldi-tree.a ../matrix/kaldi-matrix.a  \
 	../thread/kaldi-thread.a ../fstext/kaldi-fstext.a \
     ../util/kaldi-util.a ../base/kaldi-base.a 
